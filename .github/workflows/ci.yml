@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 18.x]
+        python-version: [3.9, 3.10, 3.11]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Setup and test the backend
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies for backend
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r backend/requirements.txt
+
+    - name: Run backend tests
+      run: |
+        source venv/bin/activate
+        pytest backend/tests
+
+    # Setup and test the frontend
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies for frontend
+      run: |
+        cd frontend
+        npm install
+
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          ./frontend/test-results
+          ./backend/test-results
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: build-and-test  # 테스트가 성공한 경우에만 실행
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/your-repo-name:latest
+
+    - name: Logout from Docker Hub
+      run: docker logout

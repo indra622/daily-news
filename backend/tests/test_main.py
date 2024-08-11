@@ -1,6 +1,6 @@
 import sys
 import os
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 
 # 현재 파일의 디렉토리를 가져와서, backend 디렉토리를 sys.path에 추가
@@ -14,15 +14,19 @@ def test_fetch_article_links():
     mock_html = '''
     <html>
         <body>
-            <a href="https://newsletter.towardsai.net/c/article1">Article 1</a>
-            <a href="https://newsletter.towardsai.net/c/article2">Article 2</a>
+            <a href="https://newsletter.towardsai.net/p/article1">Article 1</a>
+            <a href="https://newsletter.towardsai.net/p/article2">Article 2</a>
             <a href="https://example.com/other">Not an Article</a>
         </body>
     </html>
     '''
     
-    with patch('main.requests.get') as mock_get:
-        mock_get.return_value.content = mock_html.encode('utf-8')
+    async def mock_get(url):
+        mock_response = AsyncMock()
+        mock_response.content = mock_html.encode('utf-8')
+        return mock_response
+    
+    with patch('main.httpx.AsyncClient.get', new=mock_get):
         article_links = fetch_article_links("https://newsletter.towardsai.net/archive")
         
         assert len(article_links) == 2
@@ -35,25 +39,26 @@ def test_fetch_article_content():
     mock_html = '''
     <html>
         <body>
-            <div class="body markup">
-                <p>This is the content of the article.</p>
+            <div class="email-content">
+                This is the content of the article.
             </div>
         </body>
     </html>
     '''
     
-    with patch('main.requests.get') as mock_get:
-        mock_get.return_value.content = mock_html.encode('utf-8')
+    async def mock_get(url):
+        mock_response = AsyncMock()
+        mock_response.content = mock_html.encode('utf-8')
+        return mock_response
+    
+    with patch('main.httpx.AsyncClient.get', new=mock_get):
         content = fetch_article_content("https://newsletter.towardsai.net/p/article1")
         
-        # 모든 줄바꿈 제거 후 비교
         assert content.replace('\n', '').strip() == "This is the content of the article."
 
-
-
 def test_get_articles():
-    with patch('main.fetch_article_links') as mock_fetch_links, \
-         patch('main.fetch_article_content') as mock_fetch_content:
+    with patch('main.fetch_article_links', new=AsyncMock()) as mock_fetch_links, \
+         patch('main.fetch_article_content', new=AsyncMock()) as mock_fetch_content:
         
         mock_fetch_links.return_value = [
             "https://newsletter.towardsai.net/p/article1",

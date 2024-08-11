@@ -1,6 +1,7 @@
 import sys
 import os
 from unittest.mock import patch, AsyncMock
+import pytest
 from fastapi.testclient import TestClient
 
 # 현재 파일의 디렉토리를 가져와서, backend 디렉토리를 sys.path에 추가
@@ -10,7 +11,8 @@ from main import app, fetch_article_links, fetch_article_content
 
 client = TestClient(app)
 
-def test_fetch_article_links():
+@pytest.mark.asyncio
+async def test_fetch_article_links():
     mock_html = '''
     <html>
         <body>
@@ -27,7 +29,7 @@ def test_fetch_article_links():
         return mock_response
     
     with patch('main.httpx.AsyncClient.get', new=mock_get):
-        article_links = fetch_article_links("https://newsletter.towardsai.net/archive")
+        article_links = await fetch_article_links("https://newsletter.towardsai.net/archive")
         
         assert len(article_links) == 2
         assert article_links == [
@@ -35,7 +37,8 @@ def test_fetch_article_links():
             "https://newsletter.towardsai.net/p/article2"
         ]
 
-def test_fetch_article_content():
+@pytest.mark.asyncio
+async def test_fetch_article_content():
     mock_html = '''
     <html>
         <body>
@@ -52,11 +55,12 @@ def test_fetch_article_content():
         return mock_response
     
     with patch('main.httpx.AsyncClient.get', new=mock_get):
-        content = fetch_article_content("https://newsletter.towardsai.net/p/article1")
+        content = await fetch_article_content("https://newsletter.towardsai.net/p/article1")
         
         assert content.replace('\n', '').strip() == "This is the content of the article."
 
-def test_get_articles():
+@pytest.mark.asyncio
+async def test_get_articles():
     with patch('main.fetch_article_links', new=AsyncMock()) as mock_fetch_links, \
          patch('main.fetch_article_content', new=AsyncMock()) as mock_fetch_content:
         

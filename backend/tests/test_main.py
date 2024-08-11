@@ -27,15 +27,15 @@ def test_fetch_article_links():
         
         assert len(article_links) == 2
         assert article_links == [
-            "https://newsletter.towardsai.net/c/article1",
-            "https://newsletter.towardsai.net/c/article2"
+            "https://newsletter.towardsai.net/p/article1",
+            "https://newsletter.towardsai.net/p/article2"
         ]
 
 def test_fetch_article_content():
     mock_html = '''
     <html>
         <body>
-            <div class="email-content">
+            <div class="body markup">
                 <p>This is the content of the article.</p>
             </div>
         </body>
@@ -44,7 +44,7 @@ def test_fetch_article_content():
     
     with patch('main.requests.get') as mock_get:
         mock_get.return_value.content = mock_html.encode('utf-8')
-        content = fetch_article_content("https://newsletter.towardsai.net/c/article1")
+        content = fetch_article_content("https://newsletter.towardsai.net/p/article1")
         
         # 모든 줄바꿈 제거 후 비교
         assert content.replace('\n', '').strip() == "This is the content of the article."
@@ -56,8 +56,8 @@ def test_get_articles():
          patch('main.fetch_article_content') as mock_fetch_content:
         
         mock_fetch_links.return_value = [
-            "https://newsletter.towardsai.net/c/article1",
-            "https://newsletter.towardsai.net/c/article2"
+            "https://newsletter.towardsai.net/p/article1",
+            "https://newsletter.towardsai.net/p/article2"
         ]
         
         mock_fetch_content.side_effect = [
@@ -70,7 +70,7 @@ def test_get_articles():
         assert response.status_code == 200
         data = response.json()
         assert len(data['articles']) == 2
-        assert data['articles'][0]['url'] == "https://newsletter.towardsai.net/c/article1"
+        assert data['articles'][0]['url'] == "https://newsletter.towardsai.net/p/article1"
         assert data['articles'][0]['content'] == "Content of article 1"
-        assert data['articles'][1]['url'] == "https://newsletter.towardsai.net/c/article2"
+        assert data['articles'][1]['url'] == "https://newsletter.towardsai.net/p/article2"
         assert data['articles'][1]['content'] == "Content of article 2"
